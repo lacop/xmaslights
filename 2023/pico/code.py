@@ -9,13 +9,16 @@ import fastdht
 PIXEL_COUNT = 300 # Without the first buffer/status pixel
 PIXEL_PIN = board.GP0
 
+DHT_PIN = board.GP15
+DHT_INTERVAL_SECS = 5
+
 FRAME_START = b'\xFA'
 FRAME_END = b'\xFB'
 FRAME_ESCAPE = b'\xFC'
 PACKET_SIZE = 3 * PIXEL_COUNT
 
 # Initialize.
-print('START')
+print('INFO: START')
 pixels = neopixel.NeoPixel(PIXEL_PIN, PIXEL_COUNT + 1, auto_write=False)
 for i in range(PIXEL_COUNT + 1):
     pixels[i] = (0, 0, 0)
@@ -28,6 +31,8 @@ serial.timeout = 0.1
 pixels[0] = (0, 32, 0)
 pixels.show()
 
+dht = fastdht.FastDHT(DHT_PIN)
+
 buffer = None
 last_packet = time.monotonic_ns()
 stats_time = time.monotonic_ns()
@@ -35,7 +40,9 @@ stats_counter = 0
 
 status_color = 0
 
-print('READY FOR DATA')
+last_dht = 0
+
+print('INFO: READY FOR DATA')
 while True:
     if serial.in_waiting > 0:
         read = serial.read(serial.in_waiting)
@@ -50,15 +57,15 @@ while True:
                     buffer += b
                 escape = False
             elif b == FRAME_START:
-                print('FRAME START')
                 if buffer is None:
                     buffer = bytes()
                 else:
                     print('ERROR: invalid start byte', b)
                     buffer = bytes()
             elif b == FRAME_END:
-                print('FRAME END', len(buffer))
-                if len(buffer) == PACKET_SIZE:
+                if buffer is None:
+                    print('ERROR: invalid end byte', b)
+                elif len(buffer) == PACKET_SIZE:
                     for i in range(PIXEL_COUNT):
                         pixels[i+1] = (buffer[i*3], buffer[i*3+1], buffer[i*3+2])
                     pixels[0] = [
@@ -67,7 +74,6 @@ while True:
                     ][status_color]
                     status_color = (status_color + 1) % 2
                     pixels.show()
-                    stats_time = time.monotonic_ns()
                     stats_counter += 1
                 else:
                     print('ERROR: invalid packet size', len(buffer))
@@ -77,16 +83,26 @@ while True:
             else:
                 if buffer is not None:
                     buffer += b
-    if stats_counter >= 10:
-        now = time.monotonic_ns()
-        print('FPS:', (now - stats_time)/1000/1000/stats_counter)
+    now = time.monotonic_ns()
+    if stats_counter >= 20:        
+        elapsed = (now - stats_time) / 1000 / 1000 / 1000
+        if elapsed > 0:
+            print('FPS:', stats_counter / elapsed)
         stats_counter = 0
         stats_time = now
-    if (time.monotonic_ns() - last_packet)/1000/1000/1000 > 5:
+    if (now - last_packet)//1000//1000//1000 > 5:
         for i in range(PIXEL_COUNT + 1):
             pixels[i] = (0, 0, 0)
         pixels[0] = (32, 0, 0)
         pixels.show()
+    if (now - last_dht)//1000//1000//1000 > DHT_INTERVAL_SECS:
+        reading = dht.read()
+        if reading is None:
+            print('DHT: error')
+        else:
+            temp, humid = reading
+            print('DHT: temp={} humid={}'.format(temp, humid))
+            last_dht = now
 
 # TODO read dht
 # TODO report stats back up

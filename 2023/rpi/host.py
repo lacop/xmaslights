@@ -11,5 +11,5 @@ while True:
             pixels += bytes([0, 32, 0])
     sys.stdout.buffer.write(b'\xFA' + pixels + b'\xFB')
     sys.stdout.flush()
-    time.sleep(1)
+    time.sleep(0.05)
     l = (l + 1) % 100
