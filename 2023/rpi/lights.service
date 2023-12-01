@@ -1,0 +1,16 @@
+[Unit]
+Description=Lights controller
+# After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+WatchdogSec=30
+
+# Unbuffered output for stdout in syslog.
+ExecStart=/usr/bin/env python3 -u /home/lacop/lights.py
+
+[Install]
+WantedBy=multi-user.target
