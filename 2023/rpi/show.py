@@ -1,3 +1,4 @@
+from datetime import datetime
 import random
 
 def rgbloop(speed, cycles, intensity):
@@ -44,10 +45,21 @@ SCENES = [
     #('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 0, 32), length=10)),
 ]
 
+def active():
+    # TODO figure out timing
+    now = datetime.now()
+    if now.hour >= 16:
+        return True
+    return False
+
 def generator():
     scene = 0
     scene_queue = []
     while True:
+        if not active():
+            yield ('off', [(0, 0, 0) for _ in range(3*80)], 1)
+            continue
+
         if len(scene_queue) == 0:
             scene_queue = list(range(len(SCENES)))
             random.shuffle(scene_queue)
@@ -63,4 +75,3 @@ def generator():
             yield (name, colors, delay)
         
         # TODO fade in/out?
-        # TODO time schedule, switch to blank etc
