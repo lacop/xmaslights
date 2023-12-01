@@ -22,11 +22,26 @@ def chase(speed, cycles, color, length):
         yield (colors, speed)
         # TODO
 
+def randswap(speed, cycles, colors, swapmin, swapmax):
+    colors = [random.choice(colors) for _ in range(3*80)]
+    for _ in range(cycles):
+        yield (colors, speed)
+        for _ in range(random.randint(swapmin, swapmax)):
+            i = random.randint(0, len(colors)-1)
+            j = random.randint(0, len(colors)-1)
+            colors[i], colors[j] = colors[j], colors[i]
+
 SCENES = [
     ('rgbloop', lambda: rgbloop(speed=0.1, cycles=10, intensity=32)),
-    ('chase', lambda: chase(speed=0.1, cycles=10, color=(32, 0, 0), length=10)),
-    ('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 32, 0), length=10)),
-    ('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 0, 32), length=10)),
+    ('randswp', lambda: randswap(speed=0.1, cycles=10, colors=[
+        (64, 0, 0),
+        (0, 64, 0),
+        (0, 0, 64),
+        (64, 32, 0),
+        ], swapmin=3, swapmax=10)),
+    #('chase', lambda: chase(speed=0.1, cycles=10, color=(32, 0, 0), length=10)),
+    #('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 32, 0), length=10)),
+    #('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 0, 32), length=10)),
 ]
 
 def generator():
@@ -48,3 +63,4 @@ def generator():
             yield (name, colors, delay)
         
         # TODO fade in/out?
+        # TODO time schedule, switch to blank etc
