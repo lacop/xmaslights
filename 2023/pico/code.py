@@ -10,7 +10,7 @@ PIXEL_COUNT = 300 # Without the first buffer/status pixel
 PIXEL_PIN = board.GP0
 
 DHT_PIN = board.GP15
-DHT_INTERVAL_SECS = 5
+DHT_INTERVAL_SECS = 10
 
 FRAME_START = b'\xFA'
 FRAME_END = b'\xFB'
@@ -31,11 +31,13 @@ serial.timeout = 0.1
 pixels[0] = (0, 32, 0)
 pixels.show()
 
+
 dht = fastdht.FastDHT(DHT_PIN)
+last_dht_time = 0
 
 buffer = None
 
-last_packet = time.monotonic_ns()
+last_packet_time = time.monotonic_ns()
 need_clear = True
 
 stats_time = time.monotonic_ns()
@@ -43,13 +45,14 @@ stats_counter = 0
 
 status_color = 0
 
-last_dht = 0
+last_alive_time = time.monotonic_ns()
+last_alive_state = 0
 
 print('INFO: READY FOR DATA')
 while True:
     read = serial.read(serial.in_waiting)
     if len(read) > 0:
-        last_packet = time.monotonic_ns()
+        last_packet_time = time.monotonic_ns()
         need_clear = True
         escape = False
         for b in read:
@@ -92,24 +95,25 @@ while True:
         elapsed = (now - stats_time) / 1000 / 1000 / 1000
         if elapsed > 0:
             print('FPS:', stats_counter / elapsed)
+            last_alive_time = now
         stats_counter = 0
         stats_time = now
-    if need_clear and (now - last_packet)//1000//1000//1000 > 5:
+    if need_clear and (now - last_packet_time)//1000//1000//1000 > 5:
         for i in range(PIXEL_COUNT + 1):
             pixels[i] = (0, 0, 0)
         pixels[0] = (32, 0, 0)
         pixels.show()
         need_clear = False
-    if (now - last_dht)//1000//1000//1000 > DHT_INTERVAL_SECS:
+    if (now - last_dht_time)//1000//1000//1000 > DHT_INTERVAL_SECS:
         reading = dht.read()
         if reading is None:
             print('DHT: error')
         else:
             temp, humid = reading
             print('DHT: temp={} humid={}'.format(temp, humid))
-            last_dht = now
-
-# TODO read dht
-# TODO report stats back up
+            last_dht_time = now
+    if (now - last_alive_time)//1000//1000//1000 > 30:
+        last_alive_time = now
+        last_alive_state = (last_alive_state + 1) % 2
+        print('INFO: Alive', last_alive_state)
 # TODO watchdog?
-# TODO show temp on lcd
