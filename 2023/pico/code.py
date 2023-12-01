@@ -34,7 +34,10 @@ pixels.show()
 dht = fastdht.FastDHT(DHT_PIN)
 
 buffer = None
+
 last_packet = time.monotonic_ns()
+need_clear = True
+
 stats_time = time.monotonic_ns()
 stats_counter = 0
 
@@ -44,9 +47,10 @@ last_dht = 0
 
 print('INFO: READY FOR DATA')
 while True:
-    if serial.in_waiting > 0:
-        read = serial.read(serial.in_waiting)
+    read = serial.read(serial.in_waiting)
+    if len(read) > 0:
         last_packet = time.monotonic_ns()
+        need_clear = True
         escape = False
         for b in read:
             b = bytes([b])
@@ -90,11 +94,12 @@ while True:
             print('FPS:', stats_counter / elapsed)
         stats_counter = 0
         stats_time = now
-    if (now - last_packet)//1000//1000//1000 > 5:
+    if need_clear and (now - last_packet)//1000//1000//1000 > 5:
         for i in range(PIXEL_COUNT + 1):
             pixels[i] = (0, 0, 0)
         pixels[0] = (32, 0, 0)
         pixels.show()
+        need_clear = False
     if (now - last_dht)//1000//1000//1000 > DHT_INTERVAL_SECS:
         reading = dht.read()
         if reading is None:
