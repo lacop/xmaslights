@@ -44,16 +44,17 @@ def write_colors(colors):
     
 
 # Main update loop.
-for (colors, delay) in show.generator():
+last_state = None
+for (state, colors, delay) in show.generator():
     # Update at least every 5 seconds, otherwise the watchdog will kill us.
     delay = min(delay, 5)
-    
-    # Keep pinging the watchdog.
     notify.notify('WATCHDOG=1')
     
-    # Receive & parse everything from the serial port.
+    if last_state != state:
+        notify.notify('STATUS=' + state)
+        last_state = state
+    
     read_serial()
 
-    # Display the current colors.
     write_colors(colors)
     time.sleep(delay)

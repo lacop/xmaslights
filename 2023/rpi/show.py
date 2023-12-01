@@ -9,4 +9,4 @@ def generator():
     ]
     while True:
         colors = colors[1:] + [colors[0]]
-        yield (colors, 0.1)
+        yield ('rgb loop', colors, 0.1)
