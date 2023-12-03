@@ -1,5 +1,8 @@
-import serial
+import math
+import multiprocessing
+import re
 import sdnotify
+import serial
 import sys
 import threading
 import time
@@ -20,6 +23,66 @@ notify = sdnotify.SystemdNotifier()
 notify.notify('READY=1')
 notify.notify('STATUS=Initialized')
 
+dht_temp = None
+dht_humid = None
+def update_dht(temp, humid):
+    print(f'Temp={temp} Humid={humid}')
+    global dht_temp, dht_humid
+    dht_temp = temp
+    dht_humid = humid
+    # TODO report to MQTT
+
+# Background processes for burning CPU to increase enclosure temperature.
+def worker(queue):
+    state = False
+    while True:
+        try:
+            state = queue.get_nowait()
+        except multiprocessing.queues.Empty:
+            pass # Keep previous state
+        if state:
+            now = time.time()
+            while time.time() < now + 1:
+                for j in range(1000000):
+                    math.sqrt(j)
+        else:
+            time.sleep(1)
+
+WORKER_COUNT = 2
+queues = [multiprocessing.Queue() for _ in range(WORKER_COUNT)]
+workers = [multiprocessing.Process(target=worker, args=(queue,)) for queue in queues]
+for worker in workers:
+    worker.start()
+
+worker_state = False
+def set_worker_state(state):
+    global worker_state
+    if state == worker_state:
+        return
+    worker_state = state
+    for queue in queues:
+        queue.put(state)
+    print(f'Toggling worker state={state}')
+    # TODO report to MQTT
+
+def update_temp():
+    # Read internal CPU temperature
+    with open('/sys/class/thermal/thermal_zone0/temp') as f:
+        try:
+            internal_temp = int(f.read()) / 1000
+        except:
+            print('ERROR: failed to read internal temp')
+            return
+    print(f'Internal temp={internal_temp}')
+    # TODO report internal temp to MQTT
+
+    # Update worker state based on internal temp and DHT temp.
+    # Add some hysteresis to avoid frequent switching.
+    if internal_temp > 55 or (dht_temp is not None and dht_temp > 15):
+        set_worker_state(False)
+    elif internal_temp < 40 or (dht_temp is not None and dht_temp < 10):
+        set_worker_state(True)
+
 read_buffer = bytes()
 def read_serial():
     global read_buffer
@@ -33,7 +96,15 @@ def read_serial():
         line = read_buffer[:newline]
         read_buffer = read_buffer[newline+1:]
         print('From serial:', line.decode('ascii'))
-        # TODO parse line & update internal state
+        
+        # DHT sensor data.
+        matches = re.match(r'DHT: temp=(-?\d+) humid=(-?\d+)', line.decode('ascii'))
+        if matches:
+            temp = int(matches[1]) / 10
+            humid = int(matches[2]) / 10
+            update_dht(temp, humid)
+
+        # TODO handle other lines like errors
 
 def write_colors(colors):
     buffer = [0 for _ in range(3*300)]
@@ -52,10 +123,12 @@ def write_colors(colors):
 # Background thread for reading serial data, MQTT reporting and
 # temperature control.
 def background():
+    last_temp_update = time.time()
     while True:
         read_serial()
-        # TODO MQTT
-        # TODO temperature control
+        if time.time() - last_temp_update > 10: #TODO make this 60
+            update_temp()
+            last_temp_update = time.time()
         time.sleep(1)
 
 threading.Thread(target=background, daemon=True).start()
