@@ -132,6 +132,7 @@ def background():
             update_temp()
             last_temp_update = time.time()
         time.sleep(1)
+        # TODO report uptime (machine and process) to MQTT
 
 threading.Thread(target=background, daemon=True).start()
 
