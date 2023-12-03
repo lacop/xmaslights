@@ -23,14 +23,18 @@ notify = sdnotify.SystemdNotifier()
 notify.notify('READY=1')
 notify.notify('STATUS=Initialized')
 
+# TODO connect to MQTT
+def mqtt_send(topic, value):
+    print(f'MQTT: {topic}={value}')
+    # TODO serialize value to JSON and send to MQTT
+
 dht_temp = None
 dht_humid = None
 def update_dht(temp, humid):
-    print(f'Temp={temp} Humid={humid}')
     global dht_temp, dht_humid
     dht_temp = temp
     dht_humid = humid
-    # TODO report to MQTT
+    mqtt_send('dht', {'temperature': temp, 'humidity': humid})
 
 # Background processes for burning CPU to increase enclosure temperature.
 def worker(queue):
@@ -62,8 +66,7 @@ def set_worker_state(state):
     worker_state = state
     for queue in queues:
         queue.put(state)
-    print(f'Toggling worker state={state}')
-    # TODO report to MQTT
+    mqtt_send('cpu_burner', {'state': state})
 
 def update_temp():
     # Read internal CPU temperature
@@ -73,8 +76,7 @@ def update_temp():
         except:
             print('ERROR: failed to read internal temp')
             return
-    print(f'Internal temp={internal_temp}')
-    # TODO report internal temp to MQTT
+    mqtt_send('rpi_temp', {'temperature': internal_temp})
 
     # Update worker state based on internal temp and DHT temp.
     # Add some hysteresis to avoid frequent switching.
@@ -95,16 +97,16 @@ def read_serial():
             break
         line = read_buffer[:newline]
         read_buffer = read_buffer[newline+1:]
-        print('From serial:', line.decode('ascii'))
-        
+                
         # DHT sensor data.
         matches = re.match(r'DHT: temp=(-?\d+) humid=(-?\d+)', line.decode('ascii'))
         if matches:
             temp = int(matches[1]) / 10
             humid = int(matches[2]) / 10
             update_dht(temp, humid)
-
-        # TODO handle other lines like errors
+        else:
+            print('From serial:', line.decode('ascii'))
+            # TODO handle other lines like errors
 
 def write_colors(colors):
     buffer = [0 for _ in range(3*300)]
@@ -126,7 +128,7 @@ def background():
     last_temp_update = time.time()
     while True:
         read_serial()
-        if time.time() - last_temp_update > 10: #TODO make this 60
+        if time.time() - last_temp_update > 60:
             update_temp()
             last_temp_update = time.time()
         time.sleep(1)
@@ -143,6 +145,7 @@ for (state, colors, delay) in show.generator():
     if last_state != state:
         notify.notify('STATUS=' + state)
         last_state = state
+        mqtt_send('state', {'state': state})
     
     write_colors(colors)
     time.sleep(delay)
