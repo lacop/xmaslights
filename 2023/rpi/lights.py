@@ -1,6 +1,7 @@
 import serial
 import sdnotify
 import sys
+import threading
 import time
 
 import show
@@ -48,8 +49,18 @@ def write_colors(colors):
     serial_port.write(b'\xFA' + bytes(buffer) + b'\xFB')
     serial_port.flush()
     
+# Background thread for reading serial data, MQTT reporting and
+# temperature control.
+def background():
+    while True:
+        read_serial()
+        # TODO MQTT
+        # TODO temperature control
+        time.sleep(1)
 
-# Main update loop.
+threading.Thread(target=background, daemon=True).start()
+
+# Main update loop for the lights and watchdog.
 last_state = None
 for (state, colors, delay) in show.generator():
     # Update at least every 5 seconds, otherwise the watchdog will kill us.
@@ -60,7 +71,5 @@ for (state, colors, delay) in show.generator():
         notify.notify('STATUS=' + state)
         last_state = state
     
-    read_serial()
-
     write_colors(colors)
     time.sleep(delay)

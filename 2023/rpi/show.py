@@ -33,13 +33,25 @@ def randswap(speed, cycles, colors, swapmin, swapmax):
             colors[i], colors[j] = colors[j], colors[i]
 
 SCENES = [
-    ('rgbloop', lambda: rgbloop(speed=0.1, cycles=10, intensity=32)),
-    ('randswp', lambda: randswap(speed=0.1, cycles=10, colors=[
+    #('rgbloop', lambda: rgbloop(speed=0.5, cycles=30, intensity=64)),
+    ('colorswap', lambda: randswap(speed=0.25, cycles=480, colors=[
+        (64, 0, 0),
         (64, 0, 0),
         (0, 64, 0),
-        (0, 0, 64),
+        (0, 64, 0),
+        (64, 64, 16),
         (64, 32, 0),
-        ], swapmin=3, swapmax=10)),
+        ], swapmin=3, swapmax=15)),
+    ('whiteswap', lambda: randswap(speed=0.25, cycles=480, colors=[
+        (32, 32, 32),
+        (32, 32, 32),
+        (32, 32, 32),
+        (64, 64, 64),
+        (64, 64, 64),
+        (128, 128, 128),
+        (128, 128, 128),
+        (192, 192, 192)
+        ], swapmin=10, swapmax=20)),
     #('chase', lambda: chase(speed=0.1, cycles=10, color=(32, 0, 0), length=10)),
     #('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 32, 0), length=10)),
     #('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 0, 32), length=10)),
