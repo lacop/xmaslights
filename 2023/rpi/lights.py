@@ -8,6 +8,10 @@ import show
 # First and last 10 pixels of every 100 pixel strip are not used.
 OFFSETS = [10, 110, 210]
 PIXELS_PER_STRIP = 80
+# Always on lights to burn some power in the PSU and keep the box warm.
+# (Stupid thing is too efficient...)
+HEAT_LIGHTS = [i + j for i in [0, 100, 200] for j in [0, 1, 2, 3, 4, 99, 98, 97, 96, 95]]
+HEAT_INTENSITY = 64
 
 serial_port = serial.Serial('/dev/ttyACM1', timeout=0)
 
@@ -31,8 +35,10 @@ def read_serial():
         # TODO parse line & update internal state
 
 def write_colors(colors):
-    # TODO fill blank pixels with white to warm up?
     buffer = [0 for _ in range(3*300)]
+    for i in HEAT_LIGHTS:
+        for j in range(3):
+            buffer[3*i + j] = HEAT_INTENSITY
     for i in range(len(OFFSETS)):
         for j in range(PIXELS_PER_STRIP):
             buffer[3*(OFFSETS[i] + j) + 0] = colors[i*PIXELS_PER_STRIP + j][0]
