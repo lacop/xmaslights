@@ -32,8 +32,13 @@ def randswap(speed, cycles, colors, swapmin, swapmax):
             j = random.randint(0, len(colors)-1)
             colors[i], colors[j] = colors[j], colors[i]
 
+def aligndebug():
+    colors = [(255, 0, 0)] + [(0, 0, 0)]*78 + [(0, 0, 255)]
+    colors = colors*3
+    while True:
+        yield (colors, 1)
+
 SCENES = [
-    #('rgbloop', lambda: rgbloop(speed=0.5, cycles=30, intensity=64)),
     ('colorswap', lambda: randswap(speed=0.25, cycles=480, colors=[
         (64, 0, 0),
         (64, 0, 0),
@@ -52,6 +57,9 @@ SCENES = [
         (128, 128, 128),
         (192, 192, 192)
         ], swapmin=10, swapmax=20)),
+    # Unused.
+    #('aligndebug', lambda: aligndebug()),
+    #('rgbloop', lambda: rgbloop(speed=0.5, cycles=30, intensity=64)),    
     #('chase', lambda: chase(speed=0.1, cycles=10, color=(32, 0, 0), length=10)),
     #('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 32, 0), length=10)),
     #('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 0, 32), length=10)),

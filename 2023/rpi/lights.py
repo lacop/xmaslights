@@ -10,7 +10,7 @@ import time
 import show
 
 # First and last 10 pixels of every 100 pixel strip are not used.
-OFFSETS = [10, 110, 210]
+OFFSETS = [10, 110-1, 210]
 PIXELS_PER_STRIP = 80
 # Always on lights to burn some power in the PSU and keep the box warm.
 # (Stupid thing is too efficient...)
