@@ -1,0 +1,15 @@
+[Unit]
+Description=Ruuvi tag MQTT forwarder
+# After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+
+# Unbuffered output for stdout in syslog.
+ExecStart=/home/lacop/ruuvi/bin/python3 -u /home/lacop/ruuvi.py
+
+[Install]
+WantedBy=multi-user.target
