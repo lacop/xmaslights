@@ -68,7 +68,7 @@ workers = [multiprocessing.Process(target=worker, args=(queue,)) for queue in qu
 for worker in workers:
     worker.start()
 
-worker_state = False
+worker_state = None
 def set_worker_state(state):
     global worker_state
     if state == worker_state:
@@ -135,14 +135,20 @@ def write_colors(colors):
 # Background thread for reading serial data, MQTT reporting and
 # temperature control.
 def background():
-    last_temp_update = time.time()
+    process_start = time.time()
+    last_temp_update = 0
+    last_uptime_update = 0
     while True:
         read_serial()
         if time.time() - last_temp_update > 60:
             update_temp()
             last_temp_update = time.time()
+        if time.time() - last_uptime_update > 60:
+            process_up = time.time() - process_start
+            machine_up  = float(open('/proc/uptime').read().split()[0])
+            mqtt_send('uptime', {'process': int(process_up), 'machine': int(machine_up)})
+            last_uptime_update = time.time()
         time.sleep(1)
-        # TODO report uptime (machine and process) to MQTT
 
 threading.Thread(target=background, daemon=True).start()
 
