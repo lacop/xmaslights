@@ -38,7 +38,45 @@ def aligndebug():
     while True:
         yield (colors, 1)
 
+def rain(speed, cycles, intmin, intmax, delaymin, delaymax):
+    # (offset, direction)
+    segments = [
+        (80*section + 8*strip, -1 if strip % 2 == 0 else 1)
+        for section in range(3)
+        for strip in range(10)
+    ]
+    # (intensity, position)
+    drops = [
+        (random.randint(intmin, intmax), -random.randint(delaymin, delaymax))
+        for _ in range(len(segments))
+    ]
+    min_intensity = 8
+    for _ in range(cycles):
+        colors = [(0, 0, 0)]*80*3
+        for i in range(len(segments)):
+            (offset, direction) = segments[i]
+            (intensity, position) = drops[i]
+
+            # Render drop + trail with /2 intensity for each step
+            in_view = False
+            for _ in range(10):
+                if intensity >= min_intensity and position >= 0 and position < 8:
+                    in_view = True
+                    if direction == 1:
+                        colors[offset + position] = (intensity, intensity, intensity)
+                    else:
+                        colors[offset + 8 - position] = (intensity, intensity, intensity)
+                position -= 1
+                intensity = intensity // 2
+
+            drops[i] = (drops[i][0], drops[i][1] + 1)
+            if not in_view and position >= 8:
+                drops[i] = (random.randint(intmin, intmax), -random.randint(delaymin, delaymax))
+
+        yield (colors, speed)
+
 SCENES = [
+    ('rain', lambda: rain(speed=0.10, cycles=600, intmin=32, intmax=196, delaymin=2, delaymax=8)),
     ('colorswap', lambda: randswap(speed=0.25, cycles=480, colors=[
         (64, 0, 0),
         (64, 0, 0),
