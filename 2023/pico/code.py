@@ -110,6 +110,8 @@ while True:
         reading = dht.read()
         if reading is None:
             log('DHT: error')
+            # Try again later...
+            last_dht_time = now
         else:
             temp, humid = reading
             log(f'DHT: temp={temp} humid={humid}')
