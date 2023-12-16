@@ -1,3 +1,4 @@
+import json
 import math
 import multiprocessing
 import re
@@ -7,6 +8,9 @@ import sys
 import threading
 import time
 
+import paho.mqtt.client as mqtt
+
+import secrets
 import show
 
 # First and last 10 pixels of every 100 pixel strip are not used.
@@ -23,10 +27,16 @@ notify = sdnotify.SystemdNotifier()
 notify.notify('READY=1')
 notify.notify('STATUS=Initialized')
 
+mqtt_client = mqtt.Client()
+mqtt_client.username_pw_set(secrets.MQTT_USER, secrets.MQTT_PASSWORD)
+mqtt_client.connect(secrets.MQTT_HOST, secrets.MQTT_PORT, 60)
+mqtt_client.loop_start()
+
 # TODO connect to MQTT
 def mqtt_send(topic, value):
+    global mqtt_client
     print(f'MQTT: {topic}={value}')
-    # TODO serialize value to JSON and send to MQTT
+    mqtt_client.publish(f'lights/{topic}', json.dumps(value))
 
 dht_temp = None
 dht_humid = None
