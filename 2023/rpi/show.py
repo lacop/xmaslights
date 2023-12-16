@@ -75,9 +75,15 @@ def rain(speed, cycles, intmin, intmax, delaymin, delaymax):
 
         yield (colors, speed)
 
+def rado(cycles, speed, intensity):
+    rgb = [(intensity, 0, 0), (0, intensity, 0), (0, 0, intensity)]
+    colors = [(0, 0, 0)]*40 + [(0, 0, intensity)]*40 + [rgb[i%3] for i in range(80)] + [(intensity, intensity, 0)]*20 + [(0, 0, 0)]*60
+    for _ in range(cycles):
+        yield (colors, speed)
+
 SCENES = [
-    ('rain', lambda: rain(speed=0.10, cycles=600, intmin=32, intmax=196, delaymin=2, delaymax=8)),
-    ('colorswap', lambda: randswap(speed=0.25, cycles=480, colors=[
+    ('rain', lambda: rain(speed=0.10, cycles=300, intmin=32, intmax=196, delaymin=2, delaymax=8)),
+    ('colorswap', lambda: randswap(speed=0.25, cycles=120, colors=[
         (64, 0, 0),
         (64, 0, 0),
         (0, 64, 0),
@@ -85,7 +91,7 @@ SCENES = [
         (64, 64, 16),
         (64, 32, 0),
         ], swapmin=3, swapmax=15)),
-    ('whiteswap', lambda: randswap(speed=0.25, cycles=480, colors=[
+    ('whiteswap', lambda: randswap(speed=0.25, cycles=120, colors=[
         (32, 32, 32),
         (32, 32, 32),
         (32, 32, 32),
@@ -96,6 +102,7 @@ SCENES = [
         (192, 192, 192)
         ], swapmin=10, swapmax=20)),
     # Unused.
+    #('rado', lambda: rado(cycles=600, speed=0.1, intensity=128)),
     #('aligndebug', lambda: aligndebug()),
     #('rgbloop', lambda: rgbloop(speed=0.5, cycles=30, intensity=64)),    
     #('chase', lambda: chase(speed=0.1, cycles=10, color=(32, 0, 0), length=10)),
