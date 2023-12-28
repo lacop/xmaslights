@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 
 def rgbloop(speed, cycles, intensity):
@@ -81,6 +81,15 @@ def rado(cycles, speed, intensity):
     for _ in range(cycles):
         yield (colors, speed)
 
+
+# NEWYEAR_TRIGGER = datetime(2023, 12, 28, 16, 25, 0)
+# NEWYEAR_COUNTDOWN = 30
+# NEWYEAR_DURATION = 30
+
+NEWYEAR_TRIGGER = datetime(2024, 1, 1, 0, 0, 0)
+NEWYEAR_COUNTDOWN = 60*5
+NEWYEAR_DURATION = 10*60
+
 SCENES = [
     ('rain', lambda: rain(speed=0.10, cycles=300, intmin=32, intmax=196, delaymin=2, delaymax=8)),
     ('colorswap', lambda: randswap(speed=0.25, cycles=120, colors=[
@@ -110,6 +119,70 @@ SCENES = [
     #('chase', lambda: chase(speed=0.1, cycles=10, color=(0, 0, 32), length=10)),
 ]
 
+def newyear_active():
+    now = datetime.now()
+    return (
+        now >= NEWYEAR_TRIGGER - timedelta(seconds=NEWYEAR_COUNTDOWN) and 
+        now < NEWYEAR_TRIGGER + timedelta(seconds=NEWYEAR_DURATION)
+    )
+    
+def newyear():
+    # countdown
+    while True:
+        d = (datetime.now() - NEWYEAR_TRIGGER).total_seconds()
+        if d >= 0: break            
+        d = -d
+        
+        lights_on = int((3*80) * d/NEWYEAR_COUNTDOWN)
+        margin_left = (3*80 - lights_on) // 2
+        margin_right = 3*80 - lights_on - margin_left
+        color = (192, 192, 192)
+        # blink red on round seconds
+        if d % 1 < 0.25:
+            color = [
+                (255, 64, 64),
+                (64, 255, 64),
+                (64, 64, 255)
+                ][int(d) % 3]
+        yield ([(0, 0, 0)]*margin_left + [color]*lights_on + [(0, 0, 0)]*margin_right, 0.2)
+        
+    # fireworks
+    colors = [(0, 0, 0)]*80*3
+    while True:
+        if (datetime.now() - NEWYEAR_TRIGGER).total_seconds() > NEWYEAR_DURATION:
+            break
+        # fade existing at random rate
+        blank = []
+        for i in range(len(colors)):
+            if colors[i] != (0, 0, 0):
+                f = random.randint(4, 7)/10
+                colors[i] = tuple(int(c*f) for c in colors[i])
+            if min(colors[i]) < 8:
+                colors[i] = (0, 0, 0)
+                blank.append(i)
+        # spawn a few random ones
+        random.shuffle(blank)
+        for i in range(min(len(blank), random.randint(1, 25))):
+            COLS = [
+                (255, 255, 255),
+                (192, 192, 192),
+                (128, 128, 128),
+                (255, 0, 0),
+                (0, 255, 0),
+                (0, 0, 255),
+                (255, 255, 0),
+                (0, 255, 255),
+                (255, 0, 255),
+                (255, 128, 0),
+                (255, 0, 128),
+                (0, 255, 128),
+                (0, 128, 255),
+                (128, 255, 0),
+                (128, 0, 255),
+            ]
+            colors[blank[i]] = random.choice(COLS)
+        yield (colors, 0.1)
+
 def active():
     # TODO figure out timing
     now = datetime.now()
@@ -121,6 +194,11 @@ def generator():
     scene = 0
     scene_queue = []
     while True:
+        if newyear_active():
+            g = newyear()
+            for (colors, delay) in g:
+                yield ('newyear', colors, delay)
+        
         if not active():
             yield ('off', [(0, 0, 0) for _ in range(3*80)], 1)
             continue
@@ -137,6 +215,8 @@ def generator():
         name = SCENES[scene][0]
         generator = SCENES[scene][1]()
         for (colors, delay) in generator:
+            if newyear_active():
+                break # escape to outer loop
             yield (name, colors, delay)
         
         # TODO fade in/out?
